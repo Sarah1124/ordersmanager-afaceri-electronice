@@ -1,0 +1,145 @@
+﻿@page
+@model OrdersListModel
+@{
+    ViewData["Title"] = "Orders List";
+}
+<link rel="stylesheet" href="~/js/jqwidgets/styles/jqx.base.css" />
+<div style="width: 100%; height: auto; display: flex; flex-direction: column;">
+    <h2>@ViewData["Title"]</h2>
+    <div style="width: 100%; height: auto; display: flex; flex-direction: row; justify-content: space-between; margin: 5%;">
+        <div>
+            <div id='jqxWidget' style="display: none;">
+                <div id="tableGridOrders"></div>
+                <div style="margin-top: 30px;">
+                    <div id="cellbegineditevent"></div>
+                    <div style="margin-top: 10px;" id="cellendeditevent"></div>
+                </div>
+
+                <div id='Menu'>
+                    <ul>
+                        <li>Delete Selected Order</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+
+    <script type="text/javascript" src="~/js/jqwidgets/jqxcore.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxbuttons.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxscrollbar.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxmenu.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxgrid.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxgrid.selection.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxgrid.columnsresize.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxdata.js"></script>
+
+    <script type="text/javascript" src="~/js/jqwidgets/jqxscrollbar.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxmenu.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxgrid.pager.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxnumberinput.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxwindow.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxlistbox.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxdropdownlist.js"></script>
+    <script type="text/javascript">
+        var orders = new Array();
+        $(document).ready(function () {
+            reload();
+        });
+
+        function loadGrid() {
+            // prepare the data
+            var source =
+            {
+                datatype: "array",
+                datafields: [
+                    { name: 'Id', type: 'number' },
+                    { name: 'PersonResponsible', type: 'string' },
+                    { name: 'CreateDate', type: 'string' }
+                ],
+                id: 'Id',
+                localData: orders,
+                deleterow: function (rowid, commit) {
+                    $.ajax({
+                        type: "POST",
+                        contentType: 'application/json; charset=utf-8',
+                        url: "/api/Order/deleteOrder",
+                        dataType: 'json',
+                        data: JSON.stringify({
+                            'Id': rowid,
+                            'OrderPerson': '',
+                            'OrderProductIds': []
+                        }),
+                        success: function (result) {
+                            alert("Order with id " + result.id + " has been deleted!");
+                        }
+                    });
+                    commit(true);
+                }
+            };
+
+            var dataAdapter = new $.jqx.dataAdapter(source);
+            var editrow = -1;
+            $("#tableGridOrders").jqxGrid(
+                {
+                    source: dataAdapter,
+                    columnsresize: true,
+                    pageable: true,
+                    autoheight: true,
+                    columns: [
+                        { text: 'Person Responsible', datafield: 'PersonResponsible' },
+                        { text: 'Creation Date', datafield: 'CreateDate' }
+                    ]
+                });
+            // create context menu
+            var contextMenu = $("#Menu").jqxMenu({ width: 200, height: 58, autoOpenPopup: false, mode: 'popup' });
+
+            $("#tableGridOrders").on('contextmenu', function () {
+                return false;
+            });
+
+            // handle context menu clicks.
+            $("#Menu").on('itemclick', function (event) {
+                    var args = event.args;
+                    var rowindex = $("#tableGridOrders").jqxGrid('getselectedrowindex');
+                    var rowid = $("#tableGridOrders").jqxGrid('getrowid', rowindex);
+                    $("#tableGridOrders").jqxGrid('deleterow', rowid);
+                
+            });
+
+            $("#tableGridOrders").on('rowclick', function (event) {
+                if (event.args.rightclick) {
+                    $("#tableGridOrders").jqxGrid('selectrow', event.args.rowindex);
+                    var scrollTop = $(window).scrollTop();
+                    var scrollLeft = $(window).scrollLeft();
+                    contextMenu.jqxMenu('open', parseInt(event.args.originalEvent.clientX) + 5 + scrollLeft, parseInt(event.args.originalEvent.clientY) + 5 + scrollTop);
+
+                    return false;
+                }
+            });
+
+            $("#jqxWidget").show();
+        }
+        
+
+        function reload() {
+            getAllorders();
+        }
+
+        function getAllorders() {
+            $.ajax({
+                type: 'GET',
+                url: "/api/Order/getAllOrders",
+                success: function (result) {
+                    orders = result;
+                    loadGrid();
+                },
+                error: function (error) {
+                }
+            });
+        }
+
+    </script>
+}

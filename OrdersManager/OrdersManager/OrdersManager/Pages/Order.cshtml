@@ -1,0 +1,137 @@
+﻿@page
+@model OrderModel
+@{
+    ViewData["Title"] = "Add new Order";
+}
+<link rel="stylesheet" href="~/js/jqwidgets/styles/jqx.base.css" />
+<div style="width: 100%; height: auto; display: flex; flex-direction: column;">
+    <h2>@ViewData["Title"]</h2>
+    <div style="width: 100%; height: auto; display: flex; flex-direction: row; justify-content: space-between; margin: 5%;">
+        <div style="display: flex; flex-direction: column">
+            <div style="display: flex; flex-direction: row">
+                <div class="input-group">
+                    <label style="width: 50%;" class="jqx-label">Persoana Responsabila</label>&nbsp;
+                    <input type="text" class="jqx-input" id="orderPerson" placeholder="Nume persoana responsabila..." />
+                </div>
+                <div class="input-group">
+                    <label style="width: 50%" class="jqx-label">Produse(adauga id-uri separate prin virgula)</label>&nbsp;
+                    <input type="text" class="jqx-input" id="orderProductIds" placeholder="Id-uri produse..." />
+                </div>
+            </div>
+            <div>
+                <button style="width: 83.7%;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 margin-top: 3%;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 background-color: #31708f;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 color: white;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 border-radius: 5px;" class="jqx-button" onclick="addOrder(this)">
+                    ADAUGA
+                </button>
+            </div>
+        </div>
+        <div>
+            <div id='gridProduse' style="display: none;">
+                <div id="tableGridProduse"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+
+    <script type="text/javascript" src="~/js/jqwidgets/jqxcore.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxbuttons.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxscrollbar.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxmenu.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxgrid.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxgrid.selection.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxgrid.columnsresize.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxdata.js"></script>
+
+    <script type="text/javascript" src="~/js/jqwidgets/jqxgrid.pager.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxnumberinput.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxdropdownlist.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxlistbox.js"></script>
+    <script type="text/javascript">
+        var products = new Array();
+        $(document).ready(function () {
+            reload();
+        });
+
+        function loadGrid() {
+            // prepare the data
+            var source =
+            {
+                datatype: "array",
+                datafields: [
+                    { name: 'id', type: 'number' },
+                    { name: 'name', type: 'string' },
+                    { name: 'price', type: 'number' }
+                ],
+                id: 'id',
+                localData: products
+            };
+
+
+
+            var dataAdapter = new $.jqx.dataAdapter(source);
+            $("#tableGridProduse").jqxGrid(
+                {
+                    source: dataAdapter,
+                    columnsresize: true,
+                    pageable: true,
+                    autoheight: true,
+                    columns: [
+                        { text: 'Product Id', datafield: 'id' },
+                        { text: 'Product Name', datafield: 'name' },
+                        { text: 'Product Price', datafield: 'price' }
+                    ]
+                });
+
+            $("#gridProduse").show();
+        }
+
+        function addOrder(e) {
+            var execute = confirm("Do you want to add this order?");
+
+            if (!execute) {
+
+            } else {
+                $.ajax({
+                    type: "POST",
+                    contentType: 'application/json; charset=utf-8',
+                    url: "/api/Order/addNewOrder",
+                    dataType: 'json',
+                    data: JSON.stringify({
+                        'Id': 0,
+                        'OrderPerson': $("#orderPerson").val(),
+                        'OrderProductIds': $("#orderProductIds").val().split(',')
+                    }),
+                    success: function (result) {
+                        alert("Order with id " + result + " has been added!");
+                        $("#orderPerson").val("");
+                        $("#orderProductIds").val("");
+                        //reload();
+                    }
+                });
+            }
+        }
+
+        function reload() {
+            getAllProducts();
+        }
+
+        function getAllProducts() {
+            $.ajax({
+                type: 'GET',
+                url: "/api/Product/getAllProducts",
+                success: function (result) {
+                    products = result;
+                    loadGrid();
+                },
+                error: function (error) {
+                }
+            });
+        }
+
+    </script>
+}

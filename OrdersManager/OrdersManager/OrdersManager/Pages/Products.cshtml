@@ -1,0 +1,270 @@
+﻿@page
+@model ProductsModel
+@{
+    ViewData["Title"] = "Products";
+}
+<link rel="stylesheet" href="~/js/jqwidgets/styles/jqx.base.css" />
+<div style="width: 100%; height: auto; display: flex; flex-direction: column;">
+    <h2>@ViewData["Title"]</h2>
+    <div style="width: 100%; height: auto; display: flex; flex-direction: row; justify-content: space-between; margin: 5%;">
+        <div style="display: flex; flex-direction: column">
+            <div style="display: flex; flex-direction: row">
+                <div class="input-group">
+                    <label style="width: 50%;" class="jqx-label">Nume Produs</label>&nbsp;
+                    <input type="text" class="jqx-input" id="productName" placeholder="Nume produs..." />
+                </div>
+                <div class="input-group">
+                    <label style="width: 50%" class="jqx-label">Pret Produs</label>&nbsp;
+                    <input type="text" class="jqx-input" id="productPrice" placeholder="Pret produs..." />
+                </div>
+            </div>
+            <div>
+                <button style="width: 83.7%;
+    margin-top: 3%;
+    background-color: #31708f;
+    color: white;
+    border-radius: 5px;" class="jqx-button" onclick="addProduct(this)">
+                    ADAUGA
+                </button>
+            </div>
+        </div>
+        <div>
+            <div id='jqxWidget' style="display: none;">
+                <div id="tableGridProduse"></div>
+                <div style="margin-top: 30px;">
+                    <div id="cellbegineditevent"></div>
+                    <div style="margin-top: 10px;" id="cellendeditevent"></div>
+                </div>
+                <div id="popupWindow">
+                    <div>Edit</div>
+                    <div style="overflow: hidden;">
+                        <table>
+                            <tr>
+                                <td align="right">Product:</td>
+                                <td align="left"><input id="product" /></td>
+                            </tr>
+                            <tr>
+                                <td align="right">Price:</td>
+                                <td align="left"><div id="price"></div></td>
+                            </tr>
+                            <tr>
+                                <td align="right"></td>
+                                <td style="padding-top: 10px;" align="right"><input style="margin-right: 5px;" type="button" id="Save" value="Save" /><input id="Cancel" type="button" value="Cancel" /></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                <div id='Menu'>
+                    <ul>
+                        <li>Edit Selected Product</li>
+                        <li>Delete Selected Product</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+
+    <script type="text/javascript" src="~/js/jqwidgets/jqxcore.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxbuttons.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxscrollbar.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxmenu.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxgrid.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxgrid.selection.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxgrid.columnsresize.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxdata.js"></script>
+
+    <script type="text/javascript" src="~/js/jqwidgets/jqxscrollbar.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxmenu.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxgrid.pager.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxnumberinput.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxwindow.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxlistbox.js"></script>
+    <script type="text/javascript" src="~/js/jqwidgets/jqxdropdownlist.js"></script>
+    <script type="text/javascript">
+        var products = new Array();
+        $(document).ready(function () {
+            reload();
+        });
+
+        function loadGrid() {
+            // prepare the data
+            var source =
+            {
+                datatype: "array",
+                datafields: [
+                    { name: 'id', type: 'number' },
+                    { name: 'name', type: 'string' },
+                    { name: 'price', type: 'number' }
+                ],
+                id: 'id',
+                localData: products,
+                updaterow: function (rowid, rowdata, commit) {
+                    $.ajax({
+                        type: "POST",
+                        contentType: 'application/json; charset=utf-8',
+                        url: "/api/Product/updateProduct",
+                        dataType: 'json',
+                        data: JSON.stringify({
+                            'Id': rowid,
+                            'ProductName': rowdata.name,
+                            'ProductPrice': rowdata.price
+                        }),
+                        success: function (result) {
+                            alert("Product with id " + result.id + " has been updated!");
+                        }
+                    });
+                    commit(true);
+                },
+                deleterow: function (rowid, commit) {
+                    $.ajax({
+                        type: "POST",
+                        contentType: 'application/json; charset=utf-8',
+                        url: "/api/Product/deleteProduct",
+                        dataType: 'json',
+                        data: JSON.stringify({
+                            'Id': rowid,
+                            'ProductName': '',
+                            'ProductPrice': 200
+                        }),
+                        success: function (result) {
+                            alert("Product with id " + result.id + " has been deleted!");
+                        }
+                    });
+                    commit(true);
+                }
+            };
+
+            // initialize the input fields.
+            $("#product").addClass('jqx-input');
+            $("#lastName").height(23);
+            $("#product").width(150);
+            $("#product").height(23);
+
+            $("#product").addClass('jqx-input-light');
+
+
+            $("#price").jqxNumberInput({ symbol: '$', width: 150, height: 23, spinButtons: true });
+
+            var dataAdapter = new $.jqx.dataAdapter(source);
+            var editrow = -1;
+            $("#tableGridProduse").jqxGrid(
+                {
+                    source: dataAdapter,
+                    columnsresize: true,
+                    pageable: true,
+                    autoheight: true,
+                    columns: [
+                        { text: 'Product Name', datafield: 'name' },
+                        { text: 'Product Price', datafield: 'price' }
+                    ]
+                });
+            // create context menu
+            var contextMenu = $("#Menu").jqxMenu({ width: 200, height: 58, autoOpenPopup: false, mode: 'popup' });
+
+            $("#tableGridProduse").on('contextmenu', function () {
+                return false;
+            });
+
+            // handle context menu clicks.
+            $("#Menu").on('itemclick', function (event) {
+                var args = event.args;
+                var rowindex = $("#tableGridProduse").jqxGrid('getselectedrowindex');
+                if ($.trim($(args).text()) == "Edit Selected Product") {
+                    editrow = rowindex;
+                    var offset = $("#tableGridProduse").offset();
+                    $("#popupWindow").jqxWindow({ position: { x: parseInt(offset.left) + 60, y: parseInt(offset.top) + 60 } });
+
+                    // get the clicked row's data and initialize the input fields.
+                    var dataRecord = $("#tableGridProduse").jqxGrid('getrowdata', editrow);
+                    $("#product").val(dataRecord.name);
+                    $("#price").jqxNumberInput({ decimal: dataRecord.price });
+
+                    // show the popup window.
+                    $("#popupWindow").jqxWindow('show');
+                }
+                else {
+                    var rowid = $("#tableGridProduse").jqxGrid('getrowid', rowindex);
+                    $("#tableGridProduse").jqxGrid('deleterow', rowid);
+                }
+            });
+
+            $("#tableGridProduse").on('rowclick', function (event) {
+                if (event.args.rightclick) {
+                    $("#tableGridProduse").jqxGrid('selectrow', event.args.rowindex);
+                    var scrollTop = $(window).scrollTop();
+                    var scrollLeft = $(window).scrollLeft();
+                    contextMenu.jqxMenu('open', parseInt(event.args.originalEvent.clientX) + 5 + scrollLeft, parseInt(event.args.originalEvent.clientY) + 5 + scrollTop);
+
+                    return false;
+                }
+            });
+
+            // initialize the popup window and buttons.
+            $("#popupWindow").jqxWindow({ width: 250, resizable: false, isModal: true, autoOpen: false, cancelButton: $("#Cancel"), modalOpacity: 0.01 });
+            $("#Cancel").jqxButton({ theme: 'light' });
+            $("#Save").jqxButton({ theme: 'light' });
+
+            // update the edited row when the user clicks the 'Save' button.
+            $("#Save").click(function () {
+                if (editrow >= 0) {
+                    var row = {
+                        name: $("#product").val(),
+                        price: parseFloat($("#price").jqxNumberInput('decimal'))
+                    };
+                    var rowid = $("#tableGridProduse").jqxGrid('getrowid', editrow);
+                    $('#tableGridProduse').jqxGrid('updaterow', rowid, row);
+                    $("#popupWindow").jqxWindow('hide');
+                }
+            });
+
+            $("#jqxWidget").show();
+        }
+
+        function addProduct(e) {
+            var execute = confirm("Do you want to add this product?");
+
+            if (!execute) {
+
+            } else {
+                $.ajax({
+                    type: "POST",
+                    contentType: 'application/json; charset=utf-8',
+                    url: "/api/Product/addNewProduct",
+                    dataType: 'json',
+                    data: JSON.stringify({
+                        'Id': 0,
+                        'ProductName': $("#productName").val(),
+                        'ProductPrice': $("#productPrice").val()
+                    }),
+                    success: function (result) {
+                        alert("Product with id " + result.id + " has been added!")
+                        $("#productName").val("");
+                        $("#productPrice").val("");
+                        reload();
+                    }
+                });
+            }
+        }
+
+        function reload() {
+            getAllProducts();
+        }
+
+        function getAllProducts() {
+            $.ajax({
+                type: 'GET',
+                url: "/api/Product/getAllProducts",
+                success: function (result) {
+                    products = result;
+                    loadGrid();
+                },
+                error: function (error) {
+                }
+            });
+        }
+
+    </script>
+}
